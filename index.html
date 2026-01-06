@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Veiled Flame: The Quest for Truth</title>
+
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #0b0c10;
+  color: #d0dfff;
+  text-align: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: 1rem;
+  user-select: none;
+  transition: background-color 1s ease;
+}
+.container {
+  max-width: 600px;
+  margin: 2rem auto;
+  background: #12161f;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 40px #0066ff66;
+}
+h1 {
+  text-shadow: 0 0 8px #3399ffbb;
+}
+.flame-container {
+  position: relative;
+  width: 60px;
+  height: 140px;
+  margin: 0 auto 2rem;
+  filter: drop-shadow(0 0 10px #00b3ffcc);
+}
+.flame {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 30px;
+  height: 90px;
+  background: radial-gradient(circle at 50% 80%, rgba(0,150,255,0.9), transparent 70%);
+  border-radius: 40% 40% 50% 50% / 70% 70% 30% 30%;
+  animation: flicker 1.2s infinite alternate ease-in-out;
+  transform: translateX(-50%);
+}
+@keyframes flicker {
+  0% { height: 85px; opacity: 1; }
+  50% { height: 100px; opacity: 0.7; }
+  100% { height: 90px; opacity: 1; }
+}
+button {
+  background-color: #005bb5;
+  border: none;
+  padding: 10px 18px;
+  margin: 0.5rem;
+  color: #cce7ff;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+#message {
+  margin-top: 1rem;
+  min-height: 70px;
+  font-style: italic;
+}
+#sanity-meter {
+  margin-top: 2rem;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Veiled Flame: The Quest for Truth</h1>
+
+  <div class="flame-container">
+    <div class="flame"></div>
+  </div>
+
+  <div id="location">Location: <span id="current-location">???</span></div>
+  <div id="event-card">Event: <span id="event-text">Press Begin</span></div>
+
+  <button id="begin-game">Begin</button>
+  <button id="draw-card" disabled>Draw Event</button>
+  <button id="next-location" disabled>Next Location</button>
+
+  <div id="message"></div>
+  <div id="sanity-meter">Sanity: 5</div>
+</div>
+
+<script>
+/* =========================
+   CORE STATE
+========================= */
+let sanity = 5;
+let locationIndex = 0;
+let awaitingAnswer = false;
+
+/* =========================
+   LOCATIONS
+========================= */
+const locations = [
+{
+  name: "Glastenbury Mountain, Vermont Monastery",
+  tint: "#1a1f33",
+  passiveSanity: -1,
+  intro: "The monastery clings to Glastenbury like a scar. Prayers echo without voices.",
+  events: [
+    {
+      text: "A bell rings with no rope. Do you investigate or pray?",
+      choices: {
+        investigate: { response: "Something listens.", sanity: -1 },
+        pray: { response: "The mountain exhales.", sanity: 0 }
+      }
+    }
+  ]
+},
+{
+  name: "Cedar Compound, Monte Rio, California",
+  tint: "#13261f",
+  passiveSanity: 0,
+  intro: "Redwoods tower above the compound. The cedars remember names you do not.",
+  events: [
+    {
+      text: "A sealed room hums softly. Enter or seal it?",
+      choices: {
+        enter: { response: "You were expected.", sanity: -1 },
+        seal: { response: "Something knocks once.", sanity: 0 }
+      }
+    }
+  ]
+}
+];
+
+/* =========================
+   ELEMENTS
+========================= */
+const currentLocationEl = document.getElementById("current-location");
+const eventTextEl = document.getElementById("event-text");
+const messageEl = document.getElementById("message");
+const sanityMeterEl = document.getElementById("sanity-meter");
+const beginBtn = document.getElementById("begin-game");
+const drawBtn = document.getElementById("draw-card");
+const nextBtn = document.getElementById("next-location");
+
+/* =========================
+   SANITY SYSTEM
+========================= */
+function updateSanity(change) {
+  sanity = Math.max(0, Math.min(10, sanity + change));
+  sanityMeterEl.textContent = `Sanity: ${sanity}`;
+
+  if (sanity <= 3 && sanity > 0) {
+    messageEl.textContent = "Something watches you from just beyond thought.";
+  }
+  if (sanity === 0) {
+    messageEl.textContent = "Your mind fractures. The Veil closes.";
+    drawBtn.disabled = true;
+    nextBtn.disabled = true;
+  }
+}
+
+/* =========================
+   LOCATION ENTRY
+========================= */
+function enterLocation() {
+  const loc = locations[locationIndex];
+  document.body.style.backgroundColor = loc.tint;
+
+  currentLocationEl.textContent = loc.name;
+  eventTextEl.textContent = "Location Discovered";
+  messageEl.textContent = loc.intro;
+
+  if (loc.passiveSanity !== 0) updateSanity(loc.passiveSanity);
+
+  drawBtn.disabled = false;
+  nextBtn.disabled = false;
+}
+
+/* =========================
+   EVENTS
+========================= */
+function startEvent() {
+  const loc = locations[locationIndex];
+  const event = loc.events[Math.floor(Math.random() * loc.events.length)];
+
+  eventTextEl.textContent = event.text;
+  messageEl.innerHTML = "";
+
+  const input = document.createElement("input");
+  input.placeholder = "Type choice...";
+  const submit = document.createElement("button");
+  submit.textContent = "Submit";
+
+  messageEl.appendChild(input);
+  messageEl.appendChild(submit);
+
+  submit.onclick = () => {
+    const choice = input.value.toLowerCase();
+    if (event.choices[choice]) {
+      messageEl.textContent = event.choices[choice].response;
+      updateSanity(event.choices[choice].sanity);
+    } else {
+      messageEl.textContent = "The Veil does not understand hesitation.";
+      updateSanity(-1);
+    }
+    input.remove();
+    submit.remove();
+  };
+}
+
+/* =========================
+   BUTTONS
+========================= */
+beginBtn.onclick = () => {
+  beginBtn.disabled = true;
+  enterLocation();
+};
+
+drawBtn.onclick = startEvent;
+
+nextBtn.onclick = () => {
+  locationIndex = (locationIndex + 1) % locations.length;
+  enterLocation();
+};
+</script>
+</body>
+</html>
